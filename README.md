@@ -106,24 +106,3 @@ cd backend  && dotnet run         # API on https://localhost:7123
 ```
 
 Tests: `npm test` (frontend), `dotnet test` (backend).
-
-## Screenshots
-
-| Homepage | Carousels |
-|:--------:|:---------:|
-| ![Homepage](./screenshots/homepage.png) | ![Carousels](./screenshots/carouselles-homepage.png) |
-
-| Movie Details | TV Show Details |
-|:-------------:|:---------------:|
-| ![Movie Details](./screenshots/detail-movie.png) | ![TV Details](./screenshots/detail-tv.png) |
-
-| Search | Browse by Genre |
-|:------:|:---------------:|
-| ![Search](./screenshots/search.png) | ![Genre Page](./screenshots/genrepage.png) |
-
-| Custom Lists | Tracking |
-|:------------:|:--------:|
-| ![List Grid View](./screenshots/my-list-gridview.png) | ![My Tracking](./screenshots/my-tracking.png) |
-
-> Screenshots are from the desktop-web variant; the TV build uses the same data
-> with a D-pad shelf layout.
