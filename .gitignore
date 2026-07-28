@@ -1,0 +1,111 @@
+node_modules/
+
+# frontend
+frontend/node_modules/
+frontend/.env
+frontend/.env.*
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# backend
+backend/bin/
+backend/obj/
+backend/backend.Tests/bin/
+backend/backend.Tests/obj/
+backend/TestResults/
+backend/*.db
+backend/secrets.json
+backend/.vs/
+backend/.keys/
+backend/appsettings.Development.json
+backend/appsettings.Production.json
+
+# Root environment files (contain secrets)
+.env
+.env.*
+!.env.example
+
+# common config/secrets
+*.ini
+
+# Android signing / build artifacts
+*.jks
+*.keystore
+*.apk
+*.aab
+keystore.properties
+
+# Local media library — see media.example/ for the expected layout
+media/
+
+# editor/os
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+*.user
+*.suo
+*.csproj.user
+
+# Local design/planning notes
+docs/
+architecture.md
+HANDOFF.md
+
+# AI Assistant Configuration Files
+# ─────────────────────────────────
+# These are personal AI prompting configs - not shared in repo
+
+# Claude Code
+CLAUDE.md
+.claude/
+claude
+
+# Gemini CLI
+GEMINI.md
+
+# GitHub Copilot
+COPILOT.md
+.github/copilot-instructions.md
+
+# Cursor AI
+.cursorrules
+.cursorignore
+cursor.md
+CURSOR.md
+
+# Aider
+.aider*
+aider.md
+AIDER.md
+
+# Codeium / Windsurf
+.codeium/
+codeium.md
+CODEIUM.md
+WINDSURF.md
+windsurf.md
+
+# Generic AI agent files
+AGENTS.md
+agents.md
+AI.md
+ai.md
+LLM.md
+llm.md
+ASSISTANT.md
+assistant.md
+PROMPT.md
+prompt.md
+
+# Git worktrees
+.worktrees/
+
+# GSD Workflow (Claude Code planning state)
+.planning/
+
+# Legacy paths
+planning/todos

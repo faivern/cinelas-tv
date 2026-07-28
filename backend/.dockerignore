@@ -1,0 +1,16 @@
+# .dockerignore for .NET backend
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.log
+appsettings.Development.json
+*.md
+docker-compose.yml
+Dockerfile
+.git
+.gitignore
+backend.Tests/
+backend.sln

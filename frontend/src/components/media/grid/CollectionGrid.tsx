@@ -1,0 +1,73 @@
+import MediaCard from "../cards/MediaCard";
+import MediaCardSkeleton from "../skeleton/MediaCardSkeleton";
+
+type Part = {
+  id: number;
+  title?: string;
+  poster_path?: string;
+  overview?: string;
+  release_date?: string;
+  vote_average?: number;
+  vote_count?: number;
+  genre_ids?: number[];
+  runtime?: number;
+};
+
+type Props = {
+  parts: Part[];
+  loading?: boolean;
+};
+
+const CollectionGrid = ({ parts, loading = false }: Props) => {
+  if (loading) {
+    return (
+      <div
+        className="
+          grid gap-4
+          grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7
+          justify-items-center
+        "
+      >
+        {Array.from({ length: 10 }).map((_, i) => (
+          <MediaCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  if (!parts?.length) {
+    return (
+      <div className="text-gray-400 text-center py-8">
+        No items in this collection.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="
+        grid gap-4
+        grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7
+        justify-items-center
+      "
+    >
+      {parts.map((item) => (
+        <MediaCard
+          key={item.id}
+          id={item.id}
+          title={item.title || "Untitled"}
+          posterPath={item.poster_path || ""}
+          overview={item.overview}
+          releaseDate={item.release_date || "N/A"}
+          vote_average={item.vote_average}
+          genre_ids={item.genre_ids || []}
+          vote_count={item.vote_count}
+          runtime={item.runtime}
+          media_type="movie"
+        />
+      ))}
+    </div>
+  );
+};
+
+export default CollectionGrid;

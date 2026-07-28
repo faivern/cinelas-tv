@@ -1,0 +1,223 @@
+import { useState, useEffect, Fragment, useMemo } from "react";
+import { Listbox, Transition } from "@headlessui/react";
+import { useWatchProviders, useWatchProviderRegions } from "../../hooks/media/useWatchProviders";
+import type { MediaType, WatchProvider, WatchProviderRegion } from "../../types/tmdb";
+import TitleMid from "./title/TitleMid";
+import { getDefaultCountry, WATCH_REGION_STORAGE_KEY } from "../../utils/watchRegion";
+import { Check, ChevronDown, Search } from "lucide-react";
+
+type Props = {
+  mediaType: MediaType;
+  mediaId: number;
+};
+
+function ProviderGroup({
+  title,
+  providers,
+}: {
+  title: string;
+  providers?: WatchProvider[];
+}) {
+  if (!providers || providers.length === 0) return null;
+
+  return (
+    <div className="mb-6 md:mb-5">
+      <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-3 font-semibold border-b border-accent-foreground/30 pb-2">{title}</h4>
+      <div className="flex flex-wrap gap-3 md:gap-4">
+        {providers.map((provider) => (
+          <div
+            key={provider.provider_id}
+            title={provider.provider_name}
+            className="group flex flex-col items-center gap-1 md:gap-1.5 w-12 md:w-auto"
+          >
+            <div className="relative">
+              <img
+                src={`https://image.tmdb.org/t/p/w154${provider.logo_path}`}
+                alt={provider.provider_name}
+                className="w-12 h-12 rounded-xl object-cover border-2 border-badge-foreground transition-all shadow-md"
+              />
+            </div>
+            <span className="hidden md:block text-xs text-gray-400 text-center max-w-[5rem] truncate">
+              {provider.provider_name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProvidersSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-4 bg-gray-700 rounded w-24 mb-4" />
+      <div className="flex flex-wrap gap-2 mb-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="w-10 h-10 bg-gray-700 rounded-lg" />
+        ))}
+      </div>
+      <div className="h-4 bg-gray-700 rounded w-20 mb-4" />
+      <div className="flex flex-wrap gap-2">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="w-10 h-10 bg-gray-700 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function WatchProviders({ mediaType, mediaId }: Props) {
+  const [selectedCountry, setSelectedCountry] = useState(getDefaultCountry);
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const { data: providersData, isLoading: providersLoading } = useWatchProviders(
+    mediaType,
+    mediaId
+  );
+  const { data: regionsData, isLoading: regionsLoading } = useWatchProviderRegions();
+
+  const regions = regionsData?.results ?? [];
+  const countryProviders = providersData?.results?.[selectedCountry];
+
+  const selectedRegion = regions.find((r) => r.iso_3166_1 === selectedCountry);
+
+  const filteredRegions = useMemo(() => {
+    if (!countrySearch.trim()) return regions;
+    const search = countrySearch.toLowerCase();
+    return regions.filter(
+      (r) =>
+        r.english_name.toLowerCase().includes(search) ||
+        r.iso_3166_1.toLowerCase().includes(search)
+    );
+  }, [regions, countrySearch]);
+
+  useEffect(() => {
+    localStorage.setItem(WATCH_REGION_STORAGE_KEY, selectedCountry);
+  }, [selectedCountry]);
+
+  const hasProviders =
+    countryProviders &&
+    (countryProviders.flatrate?.length ||
+      countryProviders.rent?.length ||
+      countryProviders.buy?.length ||
+      countryProviders.ads?.length);
+
+  return (
+    <div id="watch-providers" className="bg-component-primary rounded-xl p-4 md:p-6 border border-accent-foreground/60 shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+        <TitleMid>Where to Watch</TitleMid>
+
+        {regionsLoading ? (
+          <div className="w-48 h-10 bg-badge-primary rounded-lg animate-pulse" />
+        ) : (
+          <Listbox value={selectedCountry} onChange={setSelectedCountry}>
+            <div className="relative w-full sm:w-48">
+              <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-badge-primary border border-badge-foreground py-2 pl-3 pr-10 text-left text-white     transition-all text-sm">
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`fi fi-${selectedCountry.toLowerCase()}`}
+                  ></span>
+                  {selectedRegion?.english_name || selectedCountry}
+                </span>
+                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </span>
+              </Listbox.Button>
+              <Transition
+                as={Fragment}
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+              >
+                <Listbox.Options className="absolute z-20 mt-1 max-h-72 w-full overflow-hidden rounded-lg bg-badge-primary border border-badge-foreground text-sm shadow-lg ">
+                  <div className="sticky top-0 bg-badge-primary p-2 border-b border-badge-foreground">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+                      <input
+                        type="text"
+                        placeholder="Search countries..."
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        className="w-full bg-component-primary border border-badge-foreground rounded-md py-1.5 pl-8 pr-3 text-white placeholder-gray-400   text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-auto py-1">
+                    {filteredRegions.length === 0 ? (
+                      <div className="py-2 px-4 text-gray-400 text-center">No countries found</div>
+                    ) : (
+                      filteredRegions.map((region: WatchProviderRegion) => (
+                        <Listbox.Option
+                          key={region.iso_3166_1}
+                          className={({ active }) =>
+                            `relative cursor-pointer select-none py-3 pl-10 pr-4 ${
+                              active ? "bg-accent-primary/20 text-white" : "text-gray-300"
+                            }`
+                          }
+                          value={region.iso_3166_1}
+                        >
+                          {({ selected }) => (
+                            <>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`fi fi-${region.iso_3166_1.toLowerCase()}`}
+                                >
+                                </span>
+                                {region.english_name}
+                              </span>
+                              {selected && (
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accent-primary">
+                                  <Check className="h-4 w-4" />
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))
+                    )}
+                  </div>
+                </Listbox.Options>
+              </Transition>
+            </div>
+          </Listbox>
+        )}
+      </div>
+
+      <div className="mt-5 md:mt-4">
+      {providersLoading ? (
+        <ProvidersSkeleton />
+      ) : hasProviders ? (
+        <>
+          <ProviderGroup
+            title="Stream"
+            providers={countryProviders?.flatrate}
+          />
+          <ProviderGroup
+            title="Rent"
+            providers={countryProviders?.rent}
+          />
+          <ProviderGroup
+            title="Buy"
+            providers={countryProviders?.buy}
+          />
+          <ProviderGroup
+            title="Free with Ads"
+            providers={countryProviders?.ads}
+          />
+
+        </>
+      ) : (
+        <p className="text-gray-400 text-sm">
+          No streaming information available for{" "}
+          {selectedRegion?.english_name || selectedCountry}.
+        </p>
+      )}
+      </div>
+
+      <p className="text-xs text-gray-500 mt-4">
+        Streaming data provided by JustWatch
+      </p>
+    </div>
+  );
+}

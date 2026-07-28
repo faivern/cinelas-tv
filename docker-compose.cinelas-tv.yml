@@ -1,0 +1,143 @@
+# cinelas-tv — self-hosted production-style stack (builds real images).
+# Intended for the Raspberry Pi (ARM64) but runs the same on a dev machine.
+#
+#   cp .env.example .env   # then fill in at least TMDB_API_KEY
+#   docker compose -f docker-compose.cinelas-tv.yml up -d --build
+#
+# Open http://localhost:8080  (backend Swagger at http://localhost:8081/swagger)
+#
+# Everything runs over plain HTTP for LAN / TV-WebView use — no TLS certs.
+name: cinelas-tv
+
+services:
+  # ============================================
+  # DATABASE (Postgres 16)
+  # ============================================
+  db:
+    image: postgres:16
+    container_name: cinelas-tv-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cinelas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-cinelas}
+    ports:
+      # Host 5433 to avoid clashing with the parent Cinelas stack on 5432.
+      # The backend connects internally over the compose network (db:5432).
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinelas} -d ${POSTGRES_DB:-cinelas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cinelas-tv-net
+
+  # ============================================
+  # BACKEND (.NET 8, built from backend/Dockerfile, HTTP on 8080)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+    container_name: cinelas-tv-backend
+    restart: unless-stopped
+    environment:
+      # Development skips the forced HTTPS redirect so plain HTTP works on the LAN.
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB:-cinelas};Username=${POSTGRES_USER:-cinelas};Password=${POSTGRES_PASSWORD:-devpassword}
+      - TMDB__ApiKey=${TMDB_API_KEY}
+      # Household PIN for sign-in. Profiles themselves are defined in
+      # backend/appsettings.json (Auth:Profiles) and seeded on startup.
+      - Auth__Pin=${CINELAS_PIN:-1234}
+      # The web frontend is same-origin via nginx. The Android TV APK's WebView serves
+      # the app from http://localhost (Capacitor androidScheme), so backend calls from the
+      # APK are cross-origin and need that origin explicitly allowed for CORS.
+      - CorsOrigins=http://localhost:8080,http://localhost
+      - FrontendUrl=http://localhost:8080
+      # Jellyfin lookups happen server-side; the frontend only ever sees the
+      # /jellyfin/... stream URLs the backend hands back. Empty API key →
+      # playback endpoints report available:false (stack works without Jellyfin).
+      - Jellyfin__Url=http://jellyfin:8096
+      - Jellyfin__ApiKey=${JELLYFIN_API_KEY:-}
+    # Override the image's HTTPS healthcheck — this stack serves plain HTTP.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    ports:
+      - "8081:8080"
+    volumes:
+      # DataProtection keyring (see AuthConfiguration). Without this, every
+      # container recreate regenerates the keys and signs out all profiles.
+      - dpkeys:/keys
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cinelas-tv-net
+
+  # ============================================
+  # FRONTEND (Vite build served by nginx, proxies /api to backend)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty → config.ts uses relative URLs so nginx proxies /api to the backend.
+        VITE_AUTH_URL: ""
+    container_name: cinelas-tv-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      # Same file the image already bakes in — mounted so config edits apply on
+      # container restart instead of needing a rebuild.
+      - ./frontend/nginx.cinelas-tv.conf:/etc/nginx/conf.d/nginx.conf:ro
+    depends_on:
+      - backend
+      # nginx resolves the jellyfin upstream at startup and exits if the
+      # hostname is missing, so the container must exist before nginx boots.
+      - jellyfin
+    networks:
+      - cinelas-tv-net
+
+  # ============================================
+  # JELLYFIN (media server — headless, only reached via backend + nginx)
+  # ============================================
+  jellyfin:
+    image: jellyfin/jellyfin:latest # multi-arch: runs on ARM64 Pi and x64 dev machines
+    container_name: cinelas-tv-jellyfin
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Europe/Stockholm}
+    ports:
+      # Admin-only access for initial setup wizard + API key creation.
+      # The app itself always goes through nginx at /jellyfin/.
+      - "8096:8096"
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      # Media library, read-only. Point MEDIA_PATH at the SSD mount on the Pi
+      # (e.g. MEDIA_PATH=/media). Defaults to ./media for dev machines.
+      - ${MEDIA_PATH:-./media}:/media:ro
+    networks:
+      - cinelas-tv-net
+
+volumes:
+  pgdata:
+    driver: local
+  dpkeys:
+    driver: local
+  jellyfin-config:
+    driver: local
+  jellyfin-cache:
+    driver: local
+
+networks:
+  cinelas-tv-net:
+    driver: bridge

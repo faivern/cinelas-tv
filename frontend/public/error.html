@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Server unreachable | Cinelas</title>
+  <style>
+    /* Mirrors the app's frost theme + TV focus ring; must stay self-contained
+       because this page is served from bundled APK assets when the server is down. */
+    :root {
+      --background: hsl(0, 0%, 8%);
+      --accent-primary: hsl(197, 100%, 50%);
+      --text-h1: hsl(0, 0%, 100%);
+      --subtle: hsl(0, 0%, 64%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: var(--background);
+      color: var(--text-h1);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      user-select: none;
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 2rem;
+    }
+    .watermark {
+      font-size: 9rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      color: hsla(197, 100%, 50%, 0.1);
+    }
+    h1 {
+      margin-top: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    p {
+      margin-top: 0.75rem;
+      max-width: 26rem;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--subtle);
+    }
+    button {
+      margin-top: 2rem;
+      padding: 0.75rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 0.5rem;
+      color: var(--accent-primary);
+      background: hsla(197, 100%, 50%, 0.1);
+      border: 1px solid hsla(197, 100%, 50%, 0.2);
+      cursor: pointer;
+    }
+    button:focus-visible, button:focus {
+      outline: none;
+      box-shadow:
+        0 0 0 3px var(--background),
+        0 0 0 8px var(--accent-primary);
+    }
+    .status {
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--subtle);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="watermark" aria-hidden="true">· · ·</div>
+    <h1>Can't reach the Cinelas server</h1>
+    <p>The server looks offline. Make sure it's powered on and connected — we'll keep trying in the background.</p>
+    <button id="retry" autofocus>Try again</button>
+    <div class="status" id="status">Retrying automatically…</div>
+  </main>
+  <script>
+    (function () {
+      // Stamped by the stamp-error-page plugin in vite.config.ts from
+      // public/server.json. Needed because Capacitor's local server only
+      // serves the exact errorPath URL — a fetch for ./server.json from
+      // http://localhost is proxied to the (dead) network and rejects.
+      var serverUrl = "__CINELAS_SERVER_URL__";
+      if (serverUrl.indexOf("__") === 0) serverUrl = null;
+
+      function goToApp() {
+        if (serverUrl) window.location.replace(serverUrl);
+      }
+
+      function probe() {
+        if (!serverUrl) return;
+        // no-cors: an opaque response still means the server answered.
+        fetch(serverUrl, { mode: "no-cors", cache: "no-store" })
+          .then(goToApp)
+          .catch(function () {});
+      }
+
+      function start() {
+        probe();
+        setInterval(probe, 5000);
+      }
+
+      if (serverUrl) {
+        start();
+      } else {
+        // Unstamped copy (e.g. served straight from public/): fall back to
+        // fetching the config from a sibling asset.
+        fetch("./server.json", { cache: "no-store" })
+          .then(function (r) { return r.json(); })
+          .then(function (cfg) {
+            serverUrl = cfg.url;
+            start();
+          })
+          .catch(function () {
+            document.getElementById("status").textContent =
+              "Could not load server config.";
+          });
+      }
+
+      document.getElementById("retry").addEventListener("click", goToApp);
+      // Some TV remotes send Enter/OK as keydown without a synthetic click.
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") goToApp();
+      });
+
+      // Belt-and-braces: autofocus can be ignored after WebView error loads.
+      window.addEventListener("load", function () {
+        document.getElementById("retry").focus();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+import MediaCastCard from "../cards/MediaCastCard.tsx";
+import { Link, useParams, useLocation } from "react-router-dom";
+import "../../../style/TitleHover.css";
+import type { Credit } from "../../../types/tmdb.ts";
+import TitleMid from "../title/TitleMid.tsx";
+
+type Props = {
+  cast: Credit[];
+};
+
+const MediaCastCarousel = ({ cast }: Props) => {
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const media_type = location.pathname.startsWith("/tv") ? "tv" : "movie";
+
+  const mediaCastStart = 0;
+  const mediaCastEnd = 12;
+
+  return (
+    <section className="w-full py-4">
+      <div className="bg-component-primary rounded-xl p-6 border border-accent-foreground/60 shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+          <div className="[&>div]:mb-0">
+            <TitleMid>Cast & Crew</TitleMid>
+          </div>
+          <Link to={`/${media_type}/${id}/credits`}>
+            <span className="underline-hover text-gray-400">
+              View all
+              <span className="underline-bar"></span>
+            </span>
+          </Link>
+        </div>
+
+        <div className="relative">
+          <div
+            className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-none lg:scrollbar px-3 py-3 -mx-1 rounded-lg"
+            tabIndex={0}
+            role="region"
+            aria-label="Cast and crew carousel"
+          >
+            {cast.slice(mediaCastStart, mediaCastEnd).map((person) => (
+              <div key={person.id} className="min-w-[120px] w-[120px] flex-shrink-0">
+                <MediaCastCard cast={person} />
+              </div>
+            ))}
+          </div>
+          {/* Right-edge fade — pointer-events-none so it does not block touch scroll */}
+          <div
+            className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[var(--component-primary)] to-transparent pointer-events-none lg:hidden"
+            aria-hidden="true"
+          />
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default MediaCastCarousel;

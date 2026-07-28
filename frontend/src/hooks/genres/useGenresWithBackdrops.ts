@@ -1,0 +1,155 @@
+import { useQuery } from "@tanstack/react-query";
+import { useGenres } from "./useGenres";
+import { getDiscoverGenre } from "../../api/genres.api";
+import type { EnrichedGenre, DetailMedia } from "../../types/tmdb";
+
+/**
+ * Sort items by Bayesian weighted rating (descending)
+ * WR = (v/(v+m)) × R + (m/(v+m)) × C
+ *
+ * Higher m = more skeptical of low-vote items
+ * - m=10: 12 votes gets 55% weight (too trusting)
+ * - m=500: 12 votes gets 2% weight (favors popular titles)
+ */
+function sortByBayesian(items: DetailMedia[]): DetailMedia[] {
+  const validItems = items.filter(
+    (item) =>
+      typeof item.vote_average === "number" &&
+      typeof item.vote_count === "number" &&
+      item.vote_count >= 100 && // Minimum vote threshold for quality
+      item.backdrop_path,
+  );
+
+  if (validItems.length === 0) return [];
+
+  // Use TMDB's typical mean rating (~6.5) for more stable results
+  const C = 7.5;
+  const m = 15000; // High threshold favors well-known titles
+
+  return validItems
+    .map((item) => {
+      const v = item.vote_count || 0;
+      const R = item.vote_average || 0;
+      const WR = (v / (v + m)) * R + (m / (v + m)) * C;
+      return { item, WR };
+    })
+    .sort((a, b) => b.WR - a.WR)
+    .map(({ item }) => item);
+}
+
+/**
+ * Find the best unused backdrop from a sorted list of media items.
+ */
+function findBestUnusedBackdrop(
+  sortedItems: DetailMedia[],
+  usedBackdrops: Set<string>,
+): string | null {
+  for (const item of sortedItems) {
+    if (item.backdrop_path && !usedBackdrops.has(item.backdrop_path)) {
+      return item.backdrop_path;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get the best candidates from discover results:
+ * prefer Bayesian-sorted items, fall back to any item with a backdrop.
+ */
+function getCandidates(results: DetailMedia[]): DetailMedia[] {
+  const sorted = sortByBayesian(results);
+  if (sorted.length > 0) return sorted;
+  return results
+    .filter((item) => item.backdrop_path)
+    .sort((a, b) => (b.vote_count ?? 0) - (a.vote_count ?? 0));
+}
+
+// Hardcoded backdrops for genres where TMDB discover returns no backdrop images
+const FALLBACK_BACKDROPS: Record<number, string> = {
+  10402: "/g7CHF8gTLGooTbP4GznIGwaqAGL.jpg", // Music → Coco (2017)
+  7777: "/DP3o6JKg0OiEco6jEwMtPxkHsBd.jpg", // Anime → Spirited Away
+};
+
+async function fetchDiscoverResults(
+  genreId: number,
+  mediaType: "movie" | "tv",
+): Promise<DetailMedia[]> {
+  try {
+    const result = await getDiscoverGenre({
+      genreId,
+      mediaType,
+      page: 1,
+    });
+    return result.results || [];
+  } catch {
+    return [];
+  }
+}
+
+export function useGenresWithBackdrops() {
+  const { data: genres } = useGenres();
+
+  return useQuery({
+    queryKey: ["genres", "with-backdrops"],
+    queryFn: async (): Promise<EnrichedGenre[]> => {
+      if (!genres || genres.length === 0) return [];
+
+      // Step 1: Fetch discover results in batches of 5 to avoid request bursts
+      const genreDiscoverData: { genre: typeof genres[number]; candidates: DetailMedia[] }[] = [];
+      const batchSize = 5;
+      for (let i = 0; i < genres.length; i += batchSize) {
+        const batch = genres.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (genre) => {
+            const mediaType = genre.supportedMediaTypes.includes("movie")
+              ? "movie"
+              : "tv";
+            const results = await fetchDiscoverResults(genre.id, mediaType);
+            const candidates = getCandidates(results);
+            return { genre, candidates };
+          }),
+        );
+        genreDiscoverData.push(...batchResults);
+      }
+
+      // Step 2: Assign unique primary backdrops sequentially, plus a small
+      // pool of secondary candidates for hero rotation. Secondaries are
+      // allowed to overlap across genres — inside a single genre's rotation
+      // that's invisible, and it removes the risk of starving later genres.
+      const SECONDARY_COUNT = 4;
+      const usedBackdrops = new Set<string>();
+      const genresWithBackdrops: EnrichedGenre[] = [];
+
+      for (const { genre, candidates } of genreDiscoverData) {
+        const primary =
+          findBestUnusedBackdrop(candidates, usedBackdrops) ??
+          FALLBACK_BACKDROPS[genre.id] ??
+          null;
+
+        const backdropPaths: string[] = [];
+        if (primary) {
+          usedBackdrops.add(primary);
+          backdropPaths.push(primary);
+          for (const item of candidates) {
+            if (backdropPaths.length >= 1 + SECONDARY_COUNT) break;
+            const path = item.backdrop_path;
+            if (path && !backdropPaths.includes(path)) {
+              backdropPaths.push(path);
+            }
+          }
+        }
+
+        genresWithBackdrops.push({
+          ...genre,
+          backdropPath: backdropPaths[0] ?? null,
+          backdropPaths,
+        });
+      }
+
+      return genresWithBackdrops;
+    },
+    enabled: !!genres && genres.length > 0,
+    staleTime: 1000 * 60 * 60,
+  });
+}

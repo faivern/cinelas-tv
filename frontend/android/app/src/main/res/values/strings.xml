@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cinelas TV</string>
+    <string name="title_activity_main">Cinelas TV</string>
+    <string name="package_name">com.faivern.cinelastv</string>
+    <string name="custom_url_scheme">com.faivern.cinelastv</string>
+</resources>

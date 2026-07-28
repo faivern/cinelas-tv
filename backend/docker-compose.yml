@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16
+    container_name: cinelas-db
+    environment:
+      POSTGRES_USER: cinelas
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: cinelas
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: cinelas-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cinelas.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

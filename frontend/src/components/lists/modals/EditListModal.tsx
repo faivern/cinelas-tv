@@ -1,0 +1,149 @@
+import { Fragment, useState, useEffect } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import type { List } from "../../../types/list";
+import { X } from "lucide-react";
+
+type EditListModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: { name: string; description: string; isPublic: boolean }) => void;
+  list: List | null;
+  isLoading?: boolean;
+};
+
+export default function EditListModal({
+  isOpen,
+  onClose,
+  onSave,
+  list,
+  isLoading,
+}: EditListModalProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (list) {
+      setName(list.name);
+      setDescription(list.description || "");
+    }
+  }, [list]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), description: description.trim(), isPublic: false });
+  };
+
+  const handleClose = () => {
+    onClose();
+  };
+
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-(--z-modal)" onClose={handleClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-end sm:items-center justify-center sm:p-4">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-md transform rounded-t-2xl sm:rounded-2xl bg-component-primary border border-outline p-6 shadow-xl transition-all max-h-[90dvh] overflow-y-auto overscroll-contain">
+                {/* Drag handle — visible on mobile to signal bottom-sheet affordance */}
+                <div className="flex justify-center pt-2 pb-1 sm:hidden">
+                  <div className="w-10 h-1 bg-[var(--border)] rounded-full" />
+                </div>
+                <div className="flex items-center justify-between mb-6">
+                  <Dialog.Title className="text-lg font-semibold text-[var(--text-h1)]">
+                    Edit List
+                  </Dialog.Title>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="p-2 min-w-11 min-h-11 flex items-center justify-center text-[var(--subtle)] hover:text-[var(--text-h1)] rounded-lg hover:bg-[var(--action-hover)] transition-colors"
+                  >
+                    <X />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label
+                      htmlFor="edit-list-name"
+                      className="block text-sm font-medium text-[var(--subtle)] mb-1"
+                    >
+                      Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="edit-list-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="My Favorite Movies"
+                      className="w-full px-3 py-2 bg-input border border-outline rounded-lg text-[var(--text-h1)] placeholder-[var(--subtle)]    "
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label
+                      htmlFor="edit-list-description"
+                      className="block text-sm font-medium text-[var(--subtle)] mb-1"
+                    >
+                      Description
+                    </label>
+                    <textarea
+                      id="edit-list-description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="A collection of my all-time favorite films..."
+                      rows={3}
+                      className="w-full px-3 py-2 bg-input border border-outline rounded-lg text-[var(--text-h1)] placeholder-[var(--subtle)]     resize-none"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="px-4 py-2 text-sm font-medium text-[var(--subtle)] hover:text-[var(--text-h1)] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!name.trim() || isLoading}
+                      className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 disabled:bg-[var(--action-primary)] disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {isLoading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+}

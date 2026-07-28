@@ -1,0 +1,226 @@
+import { Fragment, useState, useEffect } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { useSearch } from "../../../hooks/useSearch";
+import Poster from "../../media/shared/Poster";
+import { Check, Plus, Search, X } from "lucide-react";
+
+type AddMediaModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (media: {
+    tmdbId: number;
+    mediaType: string;
+    title: string;
+    posterPath: string | null;
+  }) => void;
+  existingTmdbIds?: Set<number>;
+  title?: string;
+};
+
+export default function AddMediaModal({
+  isOpen,
+  onClose,
+  onAdd,
+  existingTmdbIds = new Set(),
+  title = "Add Media",
+}: AddMediaModalProps) {
+  const [query, setQuery] = useState("");
+  const { results, loading, search, clearSearch, hasSearched } = useSearch();
+  const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query.trim()) {
+        search(query);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, search]);
+
+  const handleClose = () => {
+    setQuery("");
+    clearSearch();
+    setAddedIds(new Set());
+    onClose();
+  };
+
+  const handleAdd = (result: (typeof results)[0]) => {
+    const mediaTitle = result.title || result.name || "Untitled";
+    const posterPath = result.poster_path || null;
+    const mediaType = result.media_type;
+
+    onAdd({
+      tmdbId: result.id,
+      mediaType,
+      title: mediaTitle,
+      posterPath,
+    });
+
+    setAddedIds((prev) => new Set(prev).add(result.id));
+  };
+
+  // Filter to only movies and TV shows
+  const filteredResults = results.filter(
+    (r) => r.media_type === "movie" || r.media_type === "tv"
+  );
+
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-(--z-modal)" onClose={handleClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-end sm:items-center justify-center sm:p-4">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-t-2xl sm:rounded-2xl bg-component-primary border border-outline shadow-xl transition-all max-h-[90dvh] sm:max-h-[85dvh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+                  <Dialog.Title className="text-lg font-semibold text-[var(--text-h1)]">
+                    {title}
+                  </Dialog.Title>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="p-2 min-w-11 min-h-11 flex items-center justify-center text-[var(--subtle)] hover:text-[var(--text-h1)] rounded-lg hover:bg-[var(--action-hover)] transition-colors"
+                  >
+                    <X />
+                  </button>
+                </div>
+
+                {/* Search input */}
+                <div className="p-4 border-b border-[var(--border)]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--subtle)]" />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search movies and TV shows..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-input border border-outline rounded-lg text-[var(--text-h1)] placeholder-[var(--subtle)]    "
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Results */}
+                <div className="p-4 max-h-[400px] overflow-y-auto overscroll-contain">
+                  {loading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="aspect-[2/3] bg-[var(--action-primary)] rounded-lg animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : hasSearched && filteredResults.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-[var(--subtle)]">No results found</p>
+                      <p className="text-sm text-[var(--subtle)] mt-1">
+                        Try a different search term
+                      </p>
+                    </div>
+                  ) : filteredResults.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {filteredResults.map((result) => {
+                        const isAlreadyAdded =
+                          existingTmdbIds.has(result.id) ||
+                          addedIds.has(result.id);
+                        const mediaTitle =
+                          result.title || result.name || "Untitled";
+
+                        return (
+                          <div
+                            key={result.id}
+                            className="group relative rounded-lg overflow-hidden bg-[var(--action-primary)]"
+                          >
+                            <Poster
+                              path={result.poster_path}
+                              alt={mediaTitle}
+                              className="w-full aspect-[2/3]"
+                              useCustomSize
+                            />
+
+                            {/* Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                              <p className="text-white text-sm font-medium line-clamp-2 mb-2">
+                                {mediaTitle}
+                              </p>
+                              <button
+                                onClick={() => handleAdd(result)}
+                                disabled={isAlreadyAdded}
+                                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  isAlreadyAdded
+                                    ? "bg-green-600/50 text-green-200 cursor-default"
+                                    : "bg-accent-primary hover:bg-accent-primary/80 text-white"
+                                }`}
+                              >
+                                {isAlreadyAdded ? (
+                                  <>
+                                    <Check className="size-3" />
+                                    Added
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="size-3" />
+                                    Add
+                                  </>
+                                )}
+                              </button>
+                            </div>
+
+                            {/* Media type badge */}
+                            <span className="absolute top-2 left-2 px-2 py-0.5 text-xs font-medium bg-[var(--background)]/80 text-[var(--subtle)] rounded">
+                              {result.media_type === "movie" ? "Movie" : "TV"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-[var(--subtle)]">
+                        Search for movies and TV shows to add
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 p-4 border-t border-[var(--border)]">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-4 py-2 text-sm font-medium text-[var(--subtle)] hover:text-[var(--text-h1)] transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+}

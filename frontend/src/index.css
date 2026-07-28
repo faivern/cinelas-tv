@@ -1,0 +1,309 @@
+/* Self-hosted fonts — the TV WebView cannot reliably reach the Google Fonts CDN,
+   which made everything fall back to Roboto. */
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+@import "@fontsource/poppins/700.css";
+@import "tailwindcss";
+
+/* `tv:` variant — applies only inside the Android TV build (html.tv, set by
+   src/lib/tv/tvMode.ts). Lets components opt into 10-foot tweaks inline. */
+@custom-variant tv (&:where(html.tv, html.tv *));
+
+@font-face {
+  font-family: "International";
+  src: url("./assets/fonts/international/International.ttf") format("truetype");
+  font-display: swap;
+  font-synthesis: none;
+}
+@plugin "tailwind-scrollbar";
+@import "./style/tokens.css";
+@import "flag-icons/css/flag-icons.min.css";
+
+@theme {
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-ring: hsl(var(--ring));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-background: var(--background);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-text-h1: var(--text-h1);
+  --color-badge-primary: var(--badge-primary);
+  --color-badge-foreground: var(--badge-foreground);
+  --color-text-p: var(--text-p);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-component-primary: var(--component-primary);
+  --color-action-primary: var(--action-primary);
+  --color-action-hover: var(--action-hover);
+  --color-accent-thirdary: var(--accent-thirdary);
+  --color-subtle: var(--subtle);
+  --color-outline: var(--outline);
+  --color-input: var(--input);
+
+  /* Custom breakpoints — replaces tailwind.config.js theme.extend.screens (silently ignored in TW4) */
+  --breakpoint-3xl: 120rem;  /* 1920px */
+  --breakpoint-4xl: 160rem;  /* 2560px */
+
+  /* Navbar offset spacing token — generates mt-navbar-offset utility */
+  /* Responsive value set via --navbar-height CSS variable in :root */
+  --spacing-navbar-offset: var(--navbar-height);
+}
+
+:root {
+  /* Z-index scale — canonical stacking layers. Use z-(--z-*) syntax in TSX. */
+  --z-base:      1;
+  --z-raised:    10;   /* cards on hover, inline elevated elements */
+  --z-dropdown:  20;   /* dropdowns, listbox options */
+  --z-sticky:    50;   /* sticky navbar */
+  --z-overlay:   60;   /* overlay backdrops (non-dialog) */
+  --z-drawer:    100;  /* mobile nav drawer / genre panel */
+  --z-searchbar: 110;  /* search overlay */
+  --z-modal:     140;  /* Headless UI dialog backdrop */
+  --z-dialog:    150;  /* Headless UI dialog panel */
+  --z-toast:     200;  /* react-hot-toast notifications */
+
+  /* Navbar height — responsive, drives mt-navbar-offset utility */
+  --navbar-height: 5rem;        /* mobile: 80px (mt-20 equivalent) */
+}
+
+@media (min-width: 48rem) {   /* md: 768px */
+  :root { --navbar-height: 6rem; }  /* 96px = mt-24 */
+}
+@media (min-width: 64rem) {   /* lg: 1024px */
+  :root { --navbar-height: 7rem; }  /* 112px = mt-28 */
+}
+@media (min-width: 80rem) {   /* xl: 1280px */
+  :root { --navbar-height: 8rem; }  /* 128px = mt-32 */
+}
+
+body {
+  overflow-x: hidden;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* D-pad / keyboard focus baseline: thick accent ring with a background-colored
+   gap (10-foot "ring layout", not the thin web outline). Unlayered so it beats
+   Tailwind's layered `focus:*` utilities. Double box-shadow: the inner shadow
+   paints the gap in the page background color so the ring reads as a clean
+   cutout even over bright poster art. Chromium (Android TV WebView) renders
+   box-shadow following each element's border-radius. */
+:root {
+  --focus-ring-width: 2px;
+  --focus-ring-gap: 3px;
+  --focus-ring-shadow:
+    0 0 0 var(--focus-ring-gap) var(--background),
+    0 0 0 calc(var(--focus-ring-gap) + var(--focus-ring-width)) var(--accent-primary, hsl(199 100% 45%));
+}
+html.tv {
+  --focus-ring-width: 2.5px;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* Delegate the focus ring from a focusable wrapper to a marked descendant,
+   so e.g. only the circular avatar is ringed — not avatar + caption. */
+:focus-visible:has(.focus-ring-target) {
+  box-shadow: none;
+}
+:focus-visible .focus-ring-target {
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* Delegate the focus ring UP to an outer card: needed when the focusable
+   (link/button) sits inside an overflow-hidden card that would clip its ring. */
+.focus-ring-within:has(:focus-visible) {
+  box-shadow: var(--focus-ring-shadow);
+}
+.focus-ring-within :focus-visible {
+  box-shadow: none;
+}
+
+/* Fill-style focus (nav pills): suppress the ring so a Tailwind
+   focus-visible:bg-* fill can carry the highlight instead. Must live
+   unlayered to override the unlayered :focus-visible baseline above. */
+.focus-fill:focus-visible {
+  box-shadow: none;
+}
+
+/* Inset ring for full-bleed elements (e.g. hero slides) where there is no
+   room for an outer ring. Drawn on an ::after overlay because an inset
+   box-shadow on the element itself would be hidden behind its child content
+   (the full-size backdrop image). First-listed shadow paints on top, so the
+   gap band overlays the ring band's inner edge. */
+.focus-ring-inset {
+  position: relative;
+}
+.focus-ring-inset:focus-visible {
+  box-shadow: none;
+}
+.focus-ring-inset:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: var(--z-raised, 10);
+  box-shadow:
+    inset 0 0 0 var(--focus-ring-gap) var(--background),
+    inset 0 0 0 calc(var(--focus-ring-gap) + var(--focus-ring-width)) var(--accent-primary, hsl(199 100% 45%));
+}
+
+@layer scrollbar {
+  * {
+    @apply scrollbar-thin scrollbar-thumb-accent-primary scrollbar-track-transparent;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Android TV (10-foot UI) adaptations — gated on `html.tv`.
+ *  Only spacing, pointer affordances and focus emphasis change here;
+ *  the colour palette, fonts and component design are left untouched.
+ * ------------------------------------------------------------------ */
+html.tv {
+  /* Overscan-safe frame. Modern panels rarely overscan, but a small margin
+     keeps chrome/content off the extreme edge on TVs that still do. */
+  --tv-safe-x: 1.75vw;
+  --tv-safe-y: 1.5vh;
+  /* Rendered height of the TV header strip (py-3 nav + ~36px icons). Used by
+     fixed-viewport pages (e.g. TvSearchPage) to size themselves under it. */
+  --tv-navbar-height: 4rem;
+}
+
+/* The sticky <header> already carries generous inline padding (px-12 at xl),
+   so only <main> and <footer> need the safe-area inset. */
+html.tv main,
+html.tv footer {
+  padding-inline: var(--tv-safe-x);
+}
+html.tv main {
+  padding-block-start: var(--tv-safe-y);
+}
+
+/* No pointer on a remote — hide the (unreachable) scrollbars. D-pad focus
+   scrolls content into view instead. */
+html.tv *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+html.tv * {
+  scrollbar-width: none;
+}
+
+/* A bolder focus ring reads clearly from across the room. */
+html.tv :focus-visible {
+  outline-width: 2px;
+  outline-offset: 3px;
+}
+
+/* Focused-row emphasis (Netflix/Disney+/HBO pattern): while the D-pad sits in
+   a row, every other row recedes so the active one owns the screen. Only kicks
+   in when some row actually holds focus — navbar/modal focus leaves the page
+   at full brightness. Degrades gracefully where :has() is unsupported. */
+html.tv [data-tv-row] {
+  transition: opacity 300ms ease;
+}
+html.tv main:has([data-tv-row]:focus-within) [data-tv-row]:not(:focus-within) {
+  opacity: 0.4;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px 2px color-mix(in srgb, var(--accent-primary) 20%, transparent),
+                0 0 30px 4px color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px color-mix(in srgb, var(--accent-primary) 35%, transparent),
+                0 0 40px 8px color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes clap {
+  0% { transform: rotate(0deg); }
+  40% { transform: rotate(-20deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -10%); }
+  30% { transform: translate(3%, -15%); }
+  50% { transform: translate(12%, 9%); }
+  70% { transform: translate(9%, 4%); }
+  90% { transform: translate(-1%, 7%); }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-safe-or-4 {
+    /* Minimum 1rem spacing even when safe-area-inset-bottom is 0 */
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .px-page {
+    padding-left: 1rem;   /* 16px = px-4 */
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 48rem) {   /* md: 768px */
+  .px-page {
+    padding-left: 2rem;  /* 32px = px-8 */
+    padding-right: 2rem;
+  }
+}

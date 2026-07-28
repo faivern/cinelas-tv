@@ -1,0 +1,70 @@
+const genreMap: Record<number, string> = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  10759: "Action",
+  10762: "Kids",
+  10763: "News",
+  10764: "Reality",
+  10765: "Sci-Fi",
+  10766: "Soap",
+  10767: "Talk",
+  10768: "War & Politics",
+  10771: "Family",
+  10772: "Music",
+  10773: "Documentary",
+  10774: "Mini-Series",
+  10775: "Anthology",
+  10776: "Game Show",
+  10777: "Variety",
+  10778: "Stand-Up",
+  10779: "Concert",
+  10780: "Special",
+  10781: "Reality Competition",
+  10782: "Lifestyle",
+  10783: "Educational",
+  10784: "News Magazine",
+  10785: "Public Access",
+  10786: "Local",
+  10787: "International",
+  10788: "Web Series",
+  10789: "Experimental",
+  10790: "Short",
+  10791: "Animated Series",
+  10792: "Animated Movie",
+  10793: "Animated Short",
+  10794: "Animated TV Movie",
+  10795: "Animated Special",
+  10796: "Animated Anthology",
+  7777: "Anime",
+};
+export default genreMap;
+
+// TMDB splits these genres by media type: movie discover uses 28/878,
+// TV discover uses 10759 ("Action & Adventure") / 10765 ("Sci-Fi & Fantasy").
+// We present each pair as a single genre; translate at the API boundary.
+export const TV_GENRE_EQUIVALENTS: Record<number, number> = { 28: 10759, 878: 10765 };
+export const CANONICAL_GENRE_IDS: Record<number, number> = { 10759: 28, 10765: 878 };
+
+export function resolveGenreIds(genreIds: number[], originalLanguage?: string): number[] {
+  return genreIds.map(id => {
+    if (id === 16 && originalLanguage === "ja") return 7777;
+    return id;
+  });
+}

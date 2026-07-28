@@ -1,0 +1,106 @@
+import type { ReactNode } from "react";
+import MediaCard from "../../media/cards/MediaCard";
+import MediaCardSkeleton from "../skeleton/MediaCardSkeleton";
+import type { DetailMedia, MediaType } from "../../../types/tmdb";
+import TitleMid from "../title/TitleMid";
+// Define the enriched credit type that has both credit and media info
+export interface EnrichedCredit extends DetailMedia {
+  character?: string;
+  job?: string;
+  media_type: MediaType;
+}
+
+type Props = {
+  credits: EnrichedCredit[]; // Now expects enriched credits
+  totalCount?: number; // Total number of credits (for infinite scroll)
+  loading?: boolean;
+  error?: string | null;
+  headerRight?: ReactNode;
+};
+
+const CreditsDetailGrid = ({
+  credits,
+  totalCount,
+  loading = false,
+  error = null,
+  headerRight,
+}: Props) => {
+  const displayCount = totalCount ?? credits.length;
+  if (loading) {
+    return (
+      <div>
+        <TitleMid> Known for</TitleMid>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-5 4xl:grid-cols-6 gap-4 mt-4 p-2">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <MediaCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!credits.length) {
+    return (
+      <div className="text-center py-8">
+        <TitleMid> Known for</TitleMid>
+        <p className="text-[var(--subtle)] mt-4">No credits available</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex justify-between items-center mt-4 mb-2">
+        <div className="flex gap-2 items-center">
+          <TitleMid containerClassName="!mb-0">Known for</TitleMid>
+          <span className="text-[var(--subtle)] text-sm font-medium self-end">
+            {displayCount} {displayCount === 1 ? 'title' : 'titles'}
+          </span>
+        </div>
+        {headerRight}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-5 4xl:grid-cols-6 gap-4 mt-4 p-2">
+        {credits.map((credit) => (
+          <div key={`${credit.id}-${credit.character || credit.job}`}>
+            <MediaCard
+              id={credit.id}
+              title={credit.title || credit.name || "Untitled"} // Now has both title (movies) and name (TV)
+              posterPath={credit.poster_path || ""} // Now has poster_path from DetailMedia
+              overview={credit.overview || ""} // Now has overview from DetailMedia
+              releaseDate={credit.release_date || credit.first_air_date || ""} // Now has release dates
+              vote_count={credit.vote_count} // Now has vote_count from DetailMedia
+              vote_average={credit.vote_average} // Now has vote_average from DetailMedia
+              genre_ids={credit.genre_ids || []} // Now has genre_ids from DetailMedia
+              media_type={credit.media_type} // Now has correct media_type
+              runtime={credit.runtime}
+              number_of_seasons={credit.number_of_seasons}
+              number_of_episodes={credit.number_of_episodes}
+            />
+
+            {/* Show character/job info below the card */}
+            {credit.character && (
+              <p className="text-center text-[var(--subtle)] text-sm mt-1">
+                as {credit.character}
+              </p>
+            )}
+            {credit.job && (
+              <p className="text-center text-[var(--subtle)] text-sm mt-1">
+                {credit.job}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
+export default CreditsDetailGrid;

@@ -1,0 +1,59 @@
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { collectionUrl } from "../../../utils/urlBuilder";
+import Backdrop from "../shared/Backdrop";
+import Logo from "../shared/EnhancedTitle";
+import RatingPill from "../../ui/RatingPill";
+import { useCollectionById } from "../../../hooks/collections/useCollections";
+import { useMediaLogo } from "../../../hooks/images/useMediaLogo";
+import { avgCollectionRating } from "../../../utils/avgCollectionRating";
+type Props = {
+  id: number;
+  title: string;
+  backdrop_path?: string | null;
+  poster_path?: string | null;
+};
+
+export default function CollectionCard({
+  id,
+  title,
+  backdrop_path,
+}: Props) {
+  const { data: collection } = useCollectionById(id);
+  const avgRating = avgCollectionRating(collection?.parts);
+  const firstMovieId = collection?.parts?.[0]?.id;
+  const { data: logoPath } = useMediaLogo("movie", firstMovieId);
+
+  useEffect(() => {
+    if (!logoPath) return;
+    const img = new Image();
+    img.src = `https://image.tmdb.org/t/p/w342${logoPath}`;
+    return () => {
+      img.src = "";
+    };
+  }, [logoPath]);
+
+  return (
+    <Link
+      to={collectionUrl(id, title)}
+      className="w-full group block rounded-2xl shadow-lg duration-300 border border-[var(--border)] bg-[var(--component-primary)]
+         hover:scale-103 hover:border-accent-primary/75 relative overflow-hidden"
+      aria-label={title}
+    >
+      <RatingPill
+        rating={avgRating ? parseFloat(avgRating) : undefined}
+        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      />
+      <Backdrop path={backdrop_path ?? undefined} alt={title} className="w-full" sizes="780px" priority={true} />
+
+      {/* Logo overlay */}
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-3 pb-3 pt-8">
+        {logoPath ? (
+          <Logo path={logoPath} alt={title} className="max-h-8 max-w-[60%] drop-shadow-lg" sizes="160px" />
+        ) : (
+          <h3 className="text-sm font-semibold text-white truncate drop-shadow-lg">{title}</h3>
+        )}
+      </div>
+    </Link>
+  );
+}

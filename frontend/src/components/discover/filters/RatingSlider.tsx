@@ -1,0 +1,32 @@
+import { Star } from "lucide-react";
+type Props = {
+  value: number;
+  onChange: (value: number) => void;
+};
+
+export default function RatingSlider({ value, onChange }: Props) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-subtle">Min Rating</span>
+        <span className="flex items-center gap-1 text-text-h1 font-medium">
+          <Star className="text-yellow-400 w-3 h-3" />
+          {value > 0 ? `${value}+` : "Any"}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={9}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-2 bg-action-primary rounded-lg appearance-none cursor-pointer accent-accent-primary"
+      />
+      <div className="flex justify-between text-xs text-subtle">
+        <span>Any</span>
+        <span>9+</span>
+      </div>
+    </div>
+  );
+}
