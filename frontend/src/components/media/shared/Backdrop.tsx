@@ -7,6 +7,10 @@ type BackdropProps = {
   className?: string;
   sizes?: string;
   priority?: boolean; // eager-load when true
+  // Pin the source to one TMDB width instead of letting srcSet choose. A
+  // full-bleed backdrop on a hi-DPI 1080p panel resolves to `original`
+  // (often 3840px, several MB) which is far more than the screen can show.
+  width?: "w780" | "w1280";
 };
 
 export default function Backdrop({
@@ -15,6 +19,7 @@ export default function Backdrop({
   className = "",
   sizes = "100vw",
   priority = false,
+  width,
 }: BackdropProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -36,9 +41,13 @@ export default function Backdrop({
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       className={`rounded-t-lg object-cover aspect-video ${className}`}
-      src={`${base}/w1280${path}`}
-      srcSet={`${base}/w300${path} 300w, ${base}/w780${path} 780w, ${base}/w1280${path} 1280w, ${base}/original${path} 1920w`}
-      sizes={sizes}
+      src={`${base}/${width ?? "w1280"}${path}`}
+      srcSet={
+        width
+          ? undefined
+          : `${base}/w300${path} 300w, ${base}/w780${path} 780w, ${base}/w1280${path} 1280w, ${base}/original${path} 1920w`
+      }
+      sizes={width ? undefined : sizes}
       alt={alt}
       onError={() => setImageError(true)}
     />

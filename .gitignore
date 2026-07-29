@@ -37,7 +37,7 @@ backend/appsettings.Production.json
 keystore.properties
 
 # Local media library — see media.example/ for the expected layout
-media/
+/media/
 
 # editor/os
 .vscode/

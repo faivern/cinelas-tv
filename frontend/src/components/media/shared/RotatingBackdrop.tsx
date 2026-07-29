@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p";
+// `original` backdrops are 3840x2160 (~1MB, ~33MB decoded); a 1080p panel
+// cannot show that detail, and holding several at once stalls the fade.
+// The prefetch below must use this same size or it warms nothing.
+const BACKDROP_SIZE = "w1280";
 const DEFAULT_INTERVAL_MS = 8000;
 const FADE_DURATION_MS = 1500;
 
@@ -46,7 +50,7 @@ export default function RotatingBackdrop({
       const t = window.setTimeout(() => {
         const img = new Image();
         img.decoding = "async";
-        img.src = `${TMDB_IMG}/original${path}`;
+        img.src = `${TMDB_IMG}/${BACKDROP_SIZE}${path}`;
       }, i * 150);
       controllers.push(() => window.clearTimeout(t));
     });
@@ -105,7 +109,7 @@ export default function RotatingBackdrop({
       {normalizedPaths.map((path, i) => (
         <img
           key={path}
-          src={`${TMDB_IMG}/original${path}`}
+          src={`${TMDB_IMG}/${BACKDROP_SIZE}${path}`}
           alt=""
           decoding="async"
           loading={i === 0 ? "eager" : "lazy"}

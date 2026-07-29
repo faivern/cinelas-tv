@@ -255,6 +255,11 @@ function moveFocus(el: HTMLElement, behavior: ScrollBehavior = 'smooth'): void {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
+  // The fullscreen player owns its D-pad as a deterministic virtual-focus
+  // surface (transport row + timeline). Its capture listener handles every
+  // relevant key; geometric page navigation must never race it.
+  if (document.querySelector('[data-tv-player][role="dialog"]')) return;
+
   // OK/Enter select sound. No preventDefault — the browser still activates
   // the focused button/link natively.
   if (event.key === 'Enter' && !event.repeat && isTvMode()) {

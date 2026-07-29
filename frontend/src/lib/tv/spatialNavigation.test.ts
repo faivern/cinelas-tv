@@ -78,6 +78,23 @@ describe("spatialNavigation", () => {
     expect(document.activeElement).toBe(slide);
   });
 
+  it("leaves all D-pad navigation to the fullscreen player", () => {
+    document.body.innerHTML = `
+      <main>
+        <button id="outside">Outside</button>
+        <div role="dialog" data-tv-player>
+          <button id="rewind">Rewind</button>
+          <button id="play">Play</button>
+        </div>
+      </main>`;
+    initSpatialNavigation();
+
+    const outside = document.getElementById("outside")!;
+    outside.focus();
+    pressArrow("ArrowRight", outside);
+    expect(document.activeElement).toBe(outside);
+  });
+
   it("prefers a row-aligned neighbor over a closer but misaligned one", () => {
     // Detail-hero regression: a wide "Play trailer" button on the row above,
     // whose center is barely to the right, used to out-score the true row

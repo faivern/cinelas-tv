@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrendingMedia } from "../../../types/tmdb";
 import { Link } from "react-router-dom";
 import { mediaUrl } from "../../../utils/urlBuilder";
@@ -180,27 +180,25 @@ export default function TrendingCarousel({ items, loading = false }: Props) {
     [tv, emblaApi]
   );
 
-  // preload all backdrop images so carousel transitions are instant
-  useEffect(() => {
-    if (filtered.length === 0) return;
-    const base = "https://image.tmdb.org/t/p";
-    const preloaded = filtered.map((m) => {
-      const img = new Image();
-      img.src = `${base}/w1280${m.backdrop_path}`;
-      return img;
-    });
-    return () => {
-      preloaded.forEach((img) => { img.src = ""; });
-    };
-  }, [filtered]);
+  // Only the active slide and its two neighbours keep a backdrop <img> mounted.
+  // Holding all ~20 decoded at once starves the TV's image cache and makes the
+  // auto-advance transform stutter; three eager neighbours load well before the
+  // 6s rotation reaches them.
+  const isNearActive = useCallback(
+    (idx: number) => {
+      const n = filtered.length;
+      if (n === 0) return false;
+      return (
+        idx === currentIndex ||
+        idx === (currentIndex + 1) % n ||
+        idx === (currentIndex - 1 + n) % n
+      );
+    },
+    [currentIndex, filtered.length]
+  );
 
   return (
-    <div
-      data-tv-row
-      className="w-full"
-      // Preview: halved focus ring scoped to the trending hero only.
-      style={{ "--focus-ring-width": "1.25px", "--focus-ring-gap": "1.5px" } as CSSProperties}
-    >
+    <div data-tv-row className="w-full">
       {/* Web: hero slides under the translucent sticky navbar (-mt-40).
           TV: the header is in-flow and must never cover the hero. */}
       <div
@@ -281,16 +279,20 @@ export default function TrendingCarousel({ items, loading = false }: Props) {
                       data-tv-focus-key={tv ? "trending-hero" : undefined}
                       aria-hidden={tv && idx !== currentIndex ? true : undefined}
                       tabIndex={tv && idx !== currentIndex ? -1 : undefined}
-                      className="focus-ring-inset block h-full tv:rounded-2xl"
+                      className="focus-ring-none block h-full tv:rounded-2xl"
                     >
                       <div className="absolute bottom-0 left-0 w-full h-38 bg-gradient-to-t from-background via-background/70 to-transparent z-10"></div>
-                      <Backdrop
-                        path={m.backdrop_path || undefined}
-                        alt={m.title || m.name || "Backdrop"}
-                        className="w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out"
-                        sizes="100vw"
-                        priority={false}
-                      />
+                      {isNearActive(idx) ? (
+                        <Backdrop
+                          path={m.backdrop_path || undefined}
+                          alt={m.title || m.name || "Backdrop"}
+                          className="w-full h-full object-cover object-top transition-opacity duration-1000 ease-in-out"
+                          width="w1280"
+                          priority
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-white/5" />
+                      )}
                       <div
                         className={`absolute bottom-0 left-0 w-full h-full bg-gradient-to-t from-background/80 via-black/30 to-transparent z-0 pointer-events-none
                           transition-opacity duration-700 ${metaVisible ? "opacity-100" : "opacity-0"}`}

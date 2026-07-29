@@ -133,6 +133,12 @@ html.tv {
   box-shadow: none;
 }
 
+/* Opt out of the focus ring entirely (trending hero: the slide itself is the
+   only focus stop, so a ring adds nothing but visual noise). */
+.focus-ring-none:focus-visible {
+  box-shadow: none;
+}
+
 /* Fill-style focus (nav pills): suppress the ring so a Tailwind
    focus-visible:bg-* fill can carry the highlight instead. Must live
    unlayered to override the unlayered :focus-visible baseline above. */

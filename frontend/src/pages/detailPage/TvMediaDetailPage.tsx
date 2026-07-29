@@ -29,7 +29,11 @@ export default function TvMediaDetailPage({ mediaType }: { mediaType: MediaType 
   const { id } = useParams<{ id: string }>();
   const numericId = parseInt(id || "", 10);
   const [trailerOpen, setTrailerOpen] = useState(false);
-  const [player, setPlayer] = useState<{ url: string; label: string } | null>(null);
+  const [player, setPlayer] = useState<{
+    url: string;
+    label: string;
+    key: string;
+  } | null>(null);
   const [openSection, setOpenSection] = useState<TvDetailSection | null>(null);
   const sectionTriggerRef = useRef<HTMLElement | null>(null);
   const [libraryDialogOpen, setLibraryDialogOpen] = useState(false);
@@ -118,14 +122,24 @@ export default function TvMediaDetailPage({ mediaType }: { mediaType: MediaType 
     mediaType === "movie" && Boolean(playback?.available && playback.streamUrl);
 
   const playMovie = () => {
-    if (playback?.streamUrl) setPlayer({ url: playback.streamUrl, label: title });
+    if (playback?.streamUrl) {
+      setPlayer({
+        url: playback.streamUrl,
+        label: title,
+        key: `movie-${numericId}`,
+      });
+    }
   };
 
   const playEpisode = async (season: number, episode: number) => {
     const pb = await getEpisodePlayback(numericId, season, episode);
     if (pb.available && pb.streamUrl) {
       setOpenSection(null);
-      setPlayer({ url: pb.streamUrl, label: `${title} — S${season}E${episode}` });
+      setPlayer({
+        url: pb.streamUrl,
+        label: `${title} — S${season}E${episode}`,
+        key: `tv-${numericId}-s${season}e${episode}`,
+      });
     } else {
       openLibraryDialog();
     }
@@ -190,6 +204,7 @@ export default function TvMediaDetailPage({ mediaType }: { mediaType: MediaType 
         <TvPlayerOverlay
           streamUrl={player.url}
           title={player.label}
+          progressKey={player.key}
           onClose={() => setPlayer(null)}
         />
       )}
